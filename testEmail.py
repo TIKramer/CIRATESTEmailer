@@ -41,40 +41,10 @@ class Emailer(FiretaskBase):
     required_params = ["filePath"]
 
 
-    def StoreSLURMLogs(self, *args):
-        filePath = self["filePath"]
 
-        list_of_files = glob.glob(
-            filePath + ("*.[e|o]*"))
-        latest_file = max(list_of_files, key=os.path.getctime)
-        print("path :" + latest_file)
-        client = MongoClient('localhost', 27017)
-        db = client.SLURMLogs_test
-        date = datetime.now().strftime("%d/%m/%Y")
-        time = datetime.now().strftime("%H:%M:%S")
-        filename = latest_file.replace(filePath, "")
-        fileContent = open(latest_file, "r")
-        if ".o" in filename:
-            logs = db.outputLogs
-        else:
-            logs = db.errorLogs
-        log = {
-            "filename": filename,
-            "content": fileContent.read(),
-            "date": date,
-            "time": time
-        }
-        fileContent.close()
-        result = logs.insert_one(log)
-        print(result)
 
     def send_email(self, fw_spec):
-        filePath = self["filePath"]
-
-        list_of_files = glob.glob(
-            filePath + ("*.[e|o]*"))
-        latest_file = max(list_of_files, key=os.path.getctime)
-
+        
         if fw_spec.__contains__('_job_info'):
             job_info_array = fw_spec['_job_info']
         else:
@@ -104,7 +74,7 @@ class Emailer(FiretaskBase):
         # List of attachments
         attachments = [
             'C:\\Users\\Cocka\\Desktop\\Thomas_Kramer_HCI_LowNHigh (1)\\Thomas_Kramer_HCI_LowNHigh\\HCI Thomas\\HiFI Report.pdf',
-            str(job_info_array[0]['spec']['_job_info'][0]['launch_dir']) + '\\FW.json', latest_file]
+            str(job_info_array[0]['spec']['_job_info'][0]['launch_dir']) + '\\FW.json']
 
         # Add the attachments to the message
         for file in attachments:
@@ -134,55 +104,13 @@ class Emailer(FiretaskBase):
         except:
             print("Unable to send the email. Error: ", sys.exc_info()[0])
             raise
-    def send_Slack(self,fw_spec):
-        if fw_spec.__contains__('_job_info'):
-            job_info_array = fw_spec['_job_info']
-        else:
-            job_info_array = fw_spec['_fizzled_parents']
-            print(str(job_info_array))
-            print(str(fw_spec))
 
-            print(str(fw_spec['_fizzled_parents']))
-
-            # error = "\n".join(job_info_array[-1]['launches'])
-
-        prev_job_info = job_info_array[-1]
-
-        filePath = self["filePath"]
-        attachments = [
-            'C:\\Users\\Cocka\\Desktop\\Thomas_Kramer_HCI_LowNHigh (1)\\Thomas_Kramer_HCI_LowNHigh\\HCI Thomas\\HiFI Report.pdf',
-            str(job_info_array[0]['spec']['_job_info'][0]['launch_dir']) + '\\FW.json']
-
-        # Add the attachments to the message
-        for file in attachments:
-
-            client = slack.WebClient('xoxb-713173050083-1089409134070-2wGq3YXX8jkT4L9efXLLdA07')
-
-            response = client.chat_postMessage(
-                channel='#bottest',
-                text=str("FireTask: " + prev_job_info['name']) + " " + "State: " + str(prev_job_info['state']))
-            assert response["ok"]
-
-            try:
-
-                filepath = file
-                response = client.files_upload(
-                    channels='#bottest',
-                    file=filepath,
-                    filename=prev_job_info['name'])
-
-                assert response[filepath]  # the uploaded file
-
-            except SlackApiError as e:
-                assert e.response["ok"] is False
-                assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
-                print(f"Got an error: {e.response['error']}")
 
     def run_task(self, fw_spec):
 
 
 
-            self.StoreSLURMLogs()
+
             self.send_email(fw_spec)
-            self.send_Slack(fw_spec)
+
 
